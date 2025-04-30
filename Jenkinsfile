@@ -14,14 +14,11 @@ metadata:
 spec:
   containers:
     - name: jdk
-      image: docker.io/eclipse-temurin:21-jdk
+      image: docker.io/eclipse-temurin:20.0.1_9-jdk
       imagePullPolicy: Always
       command:
         - cat
       tty: true
-      securityContext:
-        runAsUser: 0
-        privileged: true
       volumeMounts:
         - name: m2-cache
           mountPath: /root/.m2
@@ -41,10 +38,6 @@ spec:
       securityContext:
         runAsUser: 0
         privileged: true
-    - name: jnlp
-      image: jenkins/inbound-agent:latest
-      args: ['$(JENKINS_SECRET)', '$(JENKINS_NAME)']
-
   volumes:
     - name: m2-cache
       hostPath:
@@ -83,17 +76,25 @@ spec:
                 echo "the name for the epheremeral test container to be created is: $EPHTEST_CONTAINER_NAME"
                 echo "the base URL for the epheremeral test container is: $EPHTEST_BASE_URL"
                 sh 'java -version'
-                sh 'chmod +x ./mvnw'
                 sh './mvnw --version'
                 container('podman') {
                     sh 'podman --version'
-                    sh "podman login $CONTAINER_REGISTRY_URL -u $CONTAINER_REGISTRY_CRED_USR -p $CONTAINER_REGISTRY_CRED_PSW --tls-verify=false"
+                    sh "podman login $CONTAINER_REGISTRY_URL -u $CONTAINER_REGISTRY_CRED_USR -p $CONTAINER_REGISTRY_CRED_PSW"
                 }
                 container('kubectl') {
                     withKubeConfig([credentialsId: "$KUBERNETES_CLUSTER_CRED_ID"]) {
                         sh 'kubectl version'
                     }
                 }
+                script {
+                    qualityGates = readYaml file: 'quality-gates.yaml'
+                }
+            }
+        }
+        stage('Compile') {
+            steps {
+                echo '-=- compiling project -=-'
+                sh './mvnw compile'
             }
         }
 
@@ -113,14 +114,6 @@ spec:
             }
         }
         
-        stage('Quality Gates') {
-            steps {
-                script {
-                    qualityGates = readYaml file: 'quality-gates.yaml'
-                    echo "Quality gates loaded: ${qualityGates}"
-                }
-            }
-        }
 
         stage('Package') {
             steps {
@@ -139,6 +132,19 @@ spec:
                     sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_SNAPSHOT"
                     sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_SNAPSHOT_LATEST"
                     sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_SNAPSHOT_LATEST"
+                }
+            }
+        }
+        
+        stage('Run container image') {
+            steps {
+                echo '-=- run container image -=-'
+                container('kubectl') {
+                    withKubeConfig([credentialsId: "$KUBERNETES_CLUSTER_CRED_ID"]) {
+                        sh "kubectl run $EPHTEST_CONTAINER_NAME --image=$CONTAINER_REGISTRY_URL/$IMAGE_SNAPSHOT --env=JAVA_OPTS=-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=$APP_JACOCO_PORT --port=$APP_LISTENING_PORT"
+                        sh "kubectl expose pod $EPHTEST_CONTAINER_NAME --port=$APP_LISTENING_PORT"
+                        sh "kubectl expose pod $EPHTEST_CONTAINER_NAME --port=$APP_JACOCO_PORT --name=$EPHTEST_CONTAINER_NAME-jacoco"
+                    }
                 }
             }
         }
