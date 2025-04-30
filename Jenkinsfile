@@ -2,20 +2,13 @@ pipeline {
     agent {
         kubernetes {
             defaultContainer 'jdk'
-            namespace 'default'
             yaml '''
 apiVersion: v1
 kind: Pod
-metadata:
-  labels:
-    jenkins: "slave"
-  annotations:
-    kubernetes.jenkins.io/pod-retention: "on-failure"  # Mantiene el Pod si el pipeline falla
 spec:
   containers:
     - name: jdk
       image: docker.io/eclipse-temurin:20.0.1_9-jdk
-      imagePullPolicy: Always
       command:
         - cat
       tty: true
@@ -44,7 +37,7 @@ spec:
         path: /data/m2-cache
         type: DirectoryOrCreate
 '''
-        }
+}
     }
 
     environment {
@@ -54,20 +47,19 @@ spec:
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
         CONTAINER_REGISTRY_URL = 'docker.io'
-        IMAGE_ORG = 'ismaelmrn'
+        IMAGE_ORG = 'ismaelmrn' // change it to your own organization at Docker.io!
         IMAGE_NAME = "$IMAGE_ORG/$APP_NAME"
-        IMAGE_SNAPSHOT = "$IMAGE_NAME:$APP_VERSION-snapshot-$BUILD_NUMBER"
-        IMAGE_SNAPSHOT_LATEST = "$IMAGE_NAME:latest-snapshot"
-        IMAGE_GA = "$IMAGE_NAME:$APP_VERSION"
-        IMAGE_GA_LATEST = "$IMAGE_NAME:latest"
+        IMAGE_SNAPSHOT = "$IMAGE_NAME:$APP_VERSION-snapshot-$BUILD_NUMBER" // tag for snapshot version
+        IMAGE_SNAPSHOT_LATEST = "$IMAGE_NAME:latest-snapshot" // tag for latest snapshot version
+        IMAGE_GA = "$IMAGE_NAME:$APP_VERSION" // tag for GA version
+        IMAGE_GA_LATEST = "$IMAGE_NAME:latest" // tag for latest GA version
         EPHTEST_CONTAINER_NAME = "ephtest-$APP_NAME-snapshot-$BUILD_NUMBER"
         EPHTEST_BASE_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT".concat("/$APP_CONTEXT_ROOT".replace('//', '/'))
 
         // credentials
-        KUBERNETES_CLUSTER_CRED_ID = 'rancher-desktop-kubeconfig1.0'
+        KUBERNETES_CLUSTER_CRED_ID = 'config'
         CONTAINER_REGISTRY_CRED = credentials("docker-hub-$IMAGE_ORG")
     }
-
     stages {
         stage('Prepare environment') {
             steps {
@@ -97,7 +89,6 @@ spec:
                 sh './mvnw compile'
             }
         }
-
         stage('Unit tests') {
             steps {
                 echo '-=- execute unit tests -=-'
@@ -106,15 +97,12 @@ spec:
                 jacoco execPattern: 'target/jacoco.exec'
             }
         }
-        
         stage('Mutation tests') {
             steps {
                 echo '-=- execute mutation tests -=-'
                 sh './mvnw org.pitest:pitest-maven:mutationCoverage'
             }
         }
-        
-
         stage('Package') {
             steps {
                 echo '-=- packaging project -=-'
@@ -122,7 +110,6 @@ spec:
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
-
         stage('Build & push container image') {
             steps {
                 echo '-=- build & push container image -=-'
@@ -135,7 +122,6 @@ spec:
                 }
             }
         }
-        
         stage('Run container image') {
             steps {
                 echo '-=- run container image -=-'
@@ -150,7 +136,6 @@ spec:
         }
     }
 }
-
 
 
 def getPomVersion() {
