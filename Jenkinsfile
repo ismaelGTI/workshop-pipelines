@@ -83,12 +83,14 @@ spec:
                 }
             }
         }
+
         stage('Compile') {
             steps {
                 echo '-=- compiling project -=-'
                 sh './mvnw compile'
             }
         }
+
         stage('Unit tests') {
             steps {
                 echo '-=- execute unit tests -=-'
@@ -97,12 +99,14 @@ spec:
                 jacoco execPattern: 'target/jacoco.exec'
             }
         }
+
         stage('Mutation tests') {
             steps {
                 echo '-=- execute mutation tests -=-'
                 sh './mvnw org.pitest:pitest-maven:mutationCoverage'
             }
         }
+
         stage('Package') {
             steps {
                 echo '-=- packaging project -=-'
@@ -110,6 +114,7 @@ spec:
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
+
         stage('Build & push container image') {
             steps {
                 echo '-=- build & push container image -=-'
@@ -122,6 +127,7 @@ spec:
                 }
             }
         }
+
         stage('Run container image') {
             steps {
                 echo '-=- run container image -=-'
@@ -134,6 +140,29 @@ spec:
                 }
             }
         }
+
+        stage('Integration tests') {
+            steps {
+                echo '-=- execute integration tests -=-'
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 ${EPHTEST_BASE_URL}actuator/health"
+                sh "./mvnw failsafe:integration-test failsafe:verify -Dtest.target.server.url=$EPHTEST_BASE_URL"
+                sh "java -jar target/dependency/jacococli.jar dump --address $EPHTEST_CONTAINER_NAME-jacoco --port $APP_JACOCO_PORT --destfile target/jacoco-it.exec"
+                sh 'mkdir target/site/jacoco-it'
+                sh 'java -jar target/dependency/jacococli.jar report target/jacoco-it.exec --classfiles target/classes --xml target/site/jacoco-it/jacoco.xml'
+                junit 'target/failsafe-reports/*.xml'
+                jacoco execPattern: 'target/jacoco-it.exec'
+            }
+        }
+
+        stage('Performance tests') {
+            steps {
+                echo '-=- execute performance tests -=-'
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 ${EPHTEST_BASE_URL}actuator/health"
+                sh "./mvnw jmeter:configure@configuration jmeter:jmeter jmeter:results -Djmeter.target.host=$EPHTEST_CONTAINER_NAME -Djmeter.target.port=$APP_LISTENING_PORT -Djmeter.target.root=$APP_CONTEXT_ROOT"
+                perfReport sourceDataFiles: 'target/jmeter/results/*.csv'
+            }
+        }
+        
     }
 }
 
