@@ -191,6 +191,14 @@ spec:
             }
         }
 
+         stage('Software composition analysis') {
+            steps {
+                echo '-=- run software composition analysis -=-'
+                sh './mvnw dependency-check:check'
+                dependencyCheckPublisher
+            }
+        }
+
     }
 
     post {
