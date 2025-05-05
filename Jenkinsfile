@@ -167,7 +167,7 @@ spec:
         stage('Code inspection & quality gate') {
             steps {
                 echo '-=- run code inspection & check quality gate -=-'
-                withSonarQubeEnv('ci-sonarqube') {
+                withSonarQubeEnv('ci-sonarqube-token') {
                     sh './mvnw sonar:sonar'
                 }
                 timeout(time: 10, unit: 'MINUTES') {
