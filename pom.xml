@@ -24,7 +24,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <java.version>20</java.version>
+        <java.version>17</java.version>
 
         <junit.version>5.8.2</junit.version> <!-- provided by spring-boot-starter-test pom -->
         <jmockit.version>1.49</jmockit.version>
@@ -149,7 +149,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire.version}</version>
                 <configuration>
-                    <argLine>${jmockit.agentConfig} ${jacoco.utAgentConfig}</argLine>
+                    <!--<argLine>${jmockit.agentConfig} ${jacoco.utAgentConfig}</argLine> -->
                     <excludes>
                         <exclude>**/*IntegrationTest.java</exclude>
                     </excludes>
