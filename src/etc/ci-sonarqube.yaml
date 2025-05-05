@@ -104,11 +104,11 @@ spec:
           image: docker.io/postgres:13.7
           resources:
             requests:
-              cpu: "0.25"
-              memory: "256Mi"
+              cpu: "1"
+              memory: "2048Mi"
             limits:
-              cpu: "0.5"
-              memory: "512Mi"
+              cpu: "2"
+              memory: "4096Mi"
           env:
             - name: POSTGRES_USER
               value: "sonarqube"
