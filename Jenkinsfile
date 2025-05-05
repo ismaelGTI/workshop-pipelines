@@ -109,6 +109,14 @@ spec:
             }
         }
 
+        stage('Software composition analysis') {
+            steps {
+                echo '-=- run software composition analysis -=-'
+                sh './mvnw dependency-check:check'
+                dependencyCheckPublisher
+            }
+        }
+
         stage('Package') {
             steps {
                 echo '-=- packaging project -=-'
@@ -188,14 +196,6 @@ spec:
                 timeout(time: 10, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
-            }
-        }
-
-         stage('Software composition analysis') {
-            steps {
-                echo '-=- run software composition analysis -=-'
-                sh './mvnw dependency-check:check'
-                dependencyCheckPublisher
             }
         }
 
