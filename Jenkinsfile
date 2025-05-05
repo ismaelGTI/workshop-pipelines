@@ -46,7 +46,6 @@ spec:
         type: DirectoryOrCreate
 '''
 }
-
     }
 
     environment {
@@ -56,7 +55,7 @@ spec:
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
         CONTAINER_REGISTRY_URL = 'docker.io'
-        IMAGE_ORG = 'ismaelmrn' // change it to your own organization at Docker.io!
+        IMAGE_ORG = 'valeal' // change it to your own organization at Docker.io!
         IMAGE_NAME = "$IMAGE_ORG/$APP_NAME"
         IMAGE_SNAPSHOT = "$IMAGE_NAME:$APP_VERSION-snapshot-$BUILD_NUMBER" // tag for snapshot version
         IMAGE_SNAPSHOT_LATEST = "$IMAGE_NAME:latest-snapshot" // tag for latest snapshot version
@@ -71,7 +70,6 @@ spec:
         LIGHTHOUSE_TOKEN = credentials("ci-lighthouse-token-$APP_NAME")
         LIGHTHOUSE_URL = credentials('ci-lighthouse-url')
     }
-
     stages {
         stage('Prepare environment') {
             steps {
@@ -95,14 +93,12 @@ spec:
                 }
             }
         }
-
         stage('Compile') {
             steps {
                 echo '-=- compiling project -=-'
                 sh './mvnw compile'
             }
         }
-
         stage('Unit tests') {
             steps {
                 echo '-=- execute unit tests -=-'
@@ -111,14 +107,12 @@ spec:
                 jacoco execPattern: 'target/jacoco.exec'
             }
         }
-
         stage('Mutation tests') {
             steps {
                 echo '-=- execute mutation tests -=-'
                 sh './mvnw org.pitest:pitest-maven:mutationCoverage'
             }
         }
-
         stage('Package') {
             steps {
                 echo '-=- packaging project -=-'
@@ -126,7 +120,6 @@ spec:
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
             }
         }
-
         stage('Build & push container image') {
             steps {
                 echo '-=- build & push container image -=-'
@@ -139,7 +132,6 @@ spec:
                 }
             }
         }
-
         stage('Run container image') {
             steps {
                 echo '-=- run container image -=-'
@@ -152,7 +144,6 @@ spec:
                 }
             }
         }
-
         stage('Integration tests') {
             steps {
                 echo '-=- execute integration tests -=-'
@@ -165,7 +156,6 @@ spec:
                 jacoco execPattern: 'target/jacoco-it.exec'
             }
         }
-
         stage('Performance tests') {
             steps {
                 echo '-=- execute performance tests -=-'
@@ -174,25 +164,10 @@ spec:
                 perfReport sourceDataFiles: 'target/jmeter/results/*.csv'
             }
         }
-
-        stage('Promote container image') {
-            steps {
-                echo '-=- promote container image -=-'
-                container('podman') {
-                    // when using latest or a non-snapshot tag to deploy GA version
-                    // this tag push should trigger the change in staging/production environment
-                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA"
-                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA"
-                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
-                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
-                }
-            }
-        }
-
-         stage('Code inspection & quality gate') {
+        stage('Code inspection & quality gate') {
             steps {
                 echo '-=- run code inspection & check quality gate -=-'
-                withSonarQubeEnv('ci-sonarqube-token') {
+                withSonarQubeEnv('ci-sonarqube') {
                     sh './mvnw sonar:sonar'
                 }
                 timeout(time: 10, unit: 'MINUTES') {
@@ -200,7 +175,6 @@ spec:
                 }
             }
         }
-
         stage('Web page performance analysis') {
             steps {
                 echo '-=- execute web page performance analysis -=-'
@@ -215,10 +189,21 @@ spec:
                     """
                 }
             }
-        }   
-
+        }
+        stage('Promote container image') {
+            steps {
+                echo '-=- promote container image -=-'
+                container('podman') {
+                    // when using latest or a non-snapshot tag to deploy GA version
+                    // this tag push should trigger the change in staging/production environment
+                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA"
+                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA"
+                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
+                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
+                }
+            }
+        }
     }
-
     post {
         always {
             echo '-=- stop test container and remove deployment -=-'
@@ -231,7 +216,6 @@ spec:
             }
         }
     }
-
 }
 
 
