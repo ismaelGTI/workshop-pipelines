@@ -32,7 +32,7 @@ spec:
         runAsUser: 0
         privileged: true
     - name: lhci
-      image: docker.io/patrickhulce/lhci-client:0.12.0
+      image: cypress/browsers:node16.14.2-chrome100-ff99
       command:
         - cat
       tty: true
@@ -181,6 +181,7 @@ spec:
                 container('lhci') {
                     sh """
                       cd $WORKSPACE
+                      npm install -g @lhci/cli@0.12.0
                       git config --global --add safe.directory $WORKSPACE
                       export LHCI_BUILD_CONTEXT__CURRENT_BRANCH=$GIT_BRANCH
                       lhci collect --collect.settings.chromeFlags='--no-sandbox' --url ${EPHTEST_BASE_URL}hello
