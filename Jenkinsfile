@@ -175,6 +175,21 @@ spec:
                 }
             }
         }
+        
+        stage('Promote container image') {
+            steps {
+                echo '-=- promote container image -=-'
+                container('podman') {
+                    // when using latest or a non-snapshot tag to deploy GA version
+                    // this tag push should trigger the change in staging/production environment
+                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA"
+                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA"
+                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
+                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
+                }
+            }
+        }
+
         stage('Web page performance analysis') {
             steps {
                 echo '-=- execute web page performance analysis -=-'
@@ -190,19 +205,7 @@ spec:
                 }
             }
         }
-        stage('Promote container image') {
-            steps {
-                echo '-=- promote container image -=-'
-                container('podman') {
-                    // when using latest or a non-snapshot tag to deploy GA version
-                    // this tag push should trigger the change in staging/production environment
-                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA"
-                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA"
-                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
-                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_GA_LATEST"
-                }
-            }
-        }
+        
     }
     post {
         always {
