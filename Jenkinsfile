@@ -32,7 +32,7 @@ spec:
         runAsUser: 0
         privileged: true
     - name: lhci
-      image: cypress/browsers:node16.14.2-chrome100-ff99
+      image: cypress/browsers:node18.12.0-chrome107
       command:
         - cat
       tty: true
